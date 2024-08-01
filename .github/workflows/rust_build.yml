@@ -1,48 +1,39 @@
 name: Rust
 
 on:
-  push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
   plugin:
-    env:
-      PLUGIN_NAME: results_screen
+    name: Plugin NRO
     runs-on: ubuntu-latest
-    container: 
-      image: jugeeya/cargo-skyline:3.2.0-no-dkp
+    permissions: write-all
     steps:
-    - uses: actions/checkout@v2
-    - name: Build release NRO
-      run: cargo-skyline skyline build --release
-      env:
-        HOME: /root
-    - name: Upload plugin artifact
-      uses: actions/upload-artifact@v2
-      with:
-        name: plugin
-        path: target/aarch64-skyline-switch/release/lib${{env.PLUGIN_NAME}}.nro
-  upload:
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    needs:
-      - plugin
-    steps:
-    - name: Download all artifacts
-      uses: actions/download-artifact@v2
-    - name: Update Release
-      uses: meeDamian/github-release@2.0
-      with:
-        token: ${{ secrets.GITHUB_TOKEN }}
-        prerelease: true
-        allow_override: true
-        gzip: false
-        tag: beta
-        name: beta
-        body: >
-          Beta built off of the latest code in the repository. 
-        files: >
-          plugin/*
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          target: x86_64-unknown-linux-gnu
+      - uses: Swatinem/rust-cache@v2
+        name: Rust Cache
+        with:
+          prefix-key: "plugin"
+          cache-all-crates: true
+      - name: Install Skyline
+        run: |
+          cargo install cargo-skyline
+          cargo-skyline skyline update-std
+      - name: Build release NRO
+        id: build_release
+        run: RUSTFLAGS=-g cargo-skyline skyline build --release
+      - name: Upload binaries to release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: target/aarch64-skyline-switch/release/libresults_screen.nro
+          tag: ${{ github.ref }}
+          overwrite: true
