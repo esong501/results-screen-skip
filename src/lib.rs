@@ -9,7 +9,7 @@ use ext::Controller;
 static mut SHOULD_END_RESULT_SCREEN : bool = false;
 pub static mut FIGHTER_MANAGER_ADDR: usize = 0;
 
-#[skyline::hook(offset = 0x3664CE0)]
+#[skyline::hook(offset = 0x36650C0)]
 unsafe fn process_inputs_handheld(controller: &mut Controller) {
     let mgr = *(FIGHTER_MANAGER_ADDR as *mut *mut app::FighterManager);
     let entry_count = FighterManager::entry_count(mgr);
