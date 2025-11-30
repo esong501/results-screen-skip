@@ -6,6 +6,8 @@ use rand::Rng;
 pub mod ext;
 use ext::Controller;
 
+use crate::ext::ControllerStyle;
+
 static mut SHOULD_END_RESULT_SCREEN : bool = false;
 pub static mut FIGHTER_MANAGER_ADDR: usize = 0;
 
@@ -14,10 +16,12 @@ unsafe fn process_inputs_handheld(controller: &mut Controller) {
     let mgr = *(FIGHTER_MANAGER_ADDR as *mut *mut app::FighterManager);
     let entry_count = FighterManager::entry_count(mgr);
     if FighterManager::is_result_mode(mgr) && entry_count > 0 {
-        if ninput::any::is_press(ninput::Buttons::PLUS) {
+        if ninput::any::is_press(ninput::Buttons::PLUS) || ninput::any::is_press(ninput::Buttons::MINUS) {
             SHOULD_END_RESULT_SCREEN = true;
         }
-        if ninput::any::is_press(ninput::Buttons::B) {
+        if ninput::any::is_press(ninput::Buttons::B) || 
+        ((controller.style == ControllerStyle::LeftJoycon && ninput::any::is_press(ninput::Buttons::LEFT)) || 
+        (controller.style == ControllerStyle::RightJoycon && ninput::any::is_press(ninput::Buttons::A))){
             SHOULD_END_RESULT_SCREEN = false;
         }
         if SHOULD_END_RESULT_SCREEN {
@@ -25,8 +29,16 @@ unsafe fn process_inputs_handheld(controller: &mut Controller) {
             // Need to space apart A-presses so it does not seem like we are holding the button.
             let n: u32 = rng.gen_range(0..3);
             if n == 1 {
-                controller.current_buttons.set_a(true);
-                controller.just_down.set_a(true);
+                if controller.style == ControllerStyle::LeftJoycon {
+                    controller.current_buttons.set_dpad_down(true);
+                    controller.just_down.set_dpad_down(true);
+                } else if controller.style == ControllerStyle::RightJoycon {
+                    controller.current_buttons.set_x(true);
+                    controller.just_down.set_x(true);
+                } else {
+                    controller.current_buttons.set_a(true);
+                    controller.just_down.set_a(true);
+                }
             }
         }
     }
